@@ -1,0 +1,112 @@
+import type { NavItem } from '@/types';
+
+export const navItems: NavItem[] = [
+  { title: 'Dashboard', href: '/dashboard', icon: 'LayoutDashboard' },
+  {
+    title: 'Patients',
+    href: '/patients',
+    icon: 'Users',
+    children: [
+      { title: 'Patient List', href: '/patients', icon: 'List' },
+      { title: 'Add Patient', href: '/patients/new', icon: 'UserPlus' },
+    ],
+  },
+  {
+    title: 'Insurance',
+    href: '/insurance',
+    icon: 'ShieldCheck',
+    children: [
+      { title: 'Providers', href: '/insurance', icon: 'Building2' },
+      { title: 'Eligibility', href: '/insurance/eligibility', icon: 'BadgeCheck' },
+      { title: 'Authorizations', href: '/insurance/authorizations', icon: 'FileCheck' },
+    ],
+  },
+  {
+    title: 'Charge Entry',
+    href: '/charges',
+    icon: 'Calculator',
+    children: [
+      { title: 'Charge Entry', href: '/charges', icon: 'ClipboardList' },
+      { title: 'Procedure Codes', href: '/charges/procedures', icon: 'Stethoscope' },
+      { title: 'Diagnosis Codes', href: '/charges/diagnoses', icon: 'FileText' },
+    ],
+  },
+  {
+    title: 'Claims',
+    href: '/claims',
+    icon: 'FileText',
+    children: [
+      { title: 'Claims List', href: '/claims', icon: 'List' },
+      { title: 'Create Claim', href: '/claims/new', icon: 'FilePlus' },
+    ],
+  },
+  {
+    title: 'Payments',
+    href: '/payments',
+    icon: 'CreditCard',
+    children: [
+      { title: 'Payment History', href: '/payments', icon: 'Receipt' },
+      { title: 'Invoices', href: '/payments/invoices', icon: 'FileText' },
+      { title: 'Refunds', href: '/payments/refunds', icon: 'RotateCcw' },
+      { title: 'Adjustments', href: '/payments/adjustments', icon: 'SlidersHorizontal' },
+    ],
+  },
+  {
+    title: 'Reports',
+    href: '/reports',
+    icon: 'BarChart3',
+    children: [
+      { title: 'Revenue Report', href: '/reports/revenue', icon: 'TrendingUp' },
+      { title: 'Aging Report', href: '/reports/aging', icon: 'Hourglass' },
+      { title: 'Provider Report', href: '/reports/providers', icon: 'Stethoscope' },
+      { title: 'Insurance Report', href: '/reports/insurance', icon: 'ShieldCheck' },
+    ],
+  },
+  {
+    title: 'Admin',
+    href: '/admin',
+    icon: 'Settings',
+    children: [
+      { title: 'Users', href: '/admin/users', icon: 'Users' },
+      { title: 'Roles', href: '/admin/roles', icon: 'KeyRound' },
+      { title: 'Permissions', href: '/admin/permissions', icon: 'Lock' },
+      { title: 'Billing Codes', href: '/admin/billing-codes', icon: 'Hash' },
+      { title: 'Fee Schedule', href: '/admin/fee-schedule', icon: 'DollarSign' },
+      { title: 'Insurance Providers', href: '/admin/insurance-providers', icon: 'Building2' },
+      { title: 'Audit Logs', href: '/admin/audit-logs', icon: 'ScrollText' },
+    ],
+  },
+  { title: 'Notifications', href: '/notifications', icon: 'Bell', badge: '3' },
+  { title: 'Patient Portal', href: '/portal', icon: 'HeartPulse' },
+];
+
+export const navIconMap: Record<string, string> = {
+  LayoutDashboard: 'LayoutDashboard',
+  Users: 'Users',
+  UserPlus: 'UserPlus',
+  List: 'List',
+  ShieldCheck: 'ShieldCheck',
+  Building2: 'Building2',
+  BadgeCheck: 'BadgeCheck',
+  FileCheck: 'FileCheck',
+  Calculator: 'Calculator',
+  ClipboardList: 'ClipboardList',
+  Stethoscope: 'Stethoscope',
+  FileText: 'FileText',
+  FilePlus: 'FilePlus',
+  CreditCard: 'CreditCard',
+  Receipt: 'Receipt',
+  RotateCcw: 'RotateCcw',
+  SlidersHorizontal: 'SlidersHorizontal',
+  BarChart3: 'BarChart3',
+  TrendingUp: 'TrendingUp',
+  Hourglass: 'Hourglass',
+  Settings: 'Settings',
+  KeyRound: 'KeyRound',
+  Lock: 'Lock',
+  Hash: 'Hash',
+  DollarSign: 'DollarSign',
+  ScrollText: 'ScrollText',
+  Bell: 'Bell',
+  HeartPulse: 'HeartPulse',
+};
