@@ -45,7 +45,7 @@ export default function AgingReportPage() {
     color: ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'][i % 5],
   }));
 
-  const totalClaims = agingData.reduce((s, r) => s + r.claims, 0);
+  const totalClaims = agingData.reduce((s, r) => s + Number(r?.claims || 0), 0);
 
   return (
     <DashboardShell>
@@ -83,15 +83,20 @@ export default function AgingReportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {agingData.map((row) => (
-                <TableRow key={row.bucket}>
-                  <TableCell className="font-medium">{row.bucket}</TableCell>
-                  <TableCell className="text-right">{row.claims}</TableCell>
-                  <TableCell className="text-right font-semibold">{formatCurrency(row.amount)}</TableCell>
-                  <TableCell className="text-right">{row.percent}%</TableCell>
-                  <TableCell><div className="w-32"><Progress value={row.percent} className="h-2" /></div></TableCell>
-                </TableRow>
-              ))}
+              {agingData.map((row, idx) => {
+                const claims = Number(row?.claims || 0);
+                const amount = Number(row?.amount || 0);
+                const percent = Number(row?.percent || 0);
+                return (
+                  <TableRow key={row?.bucket || idx}>
+                    <TableCell className="font-medium">{row?.bucket || '—'}</TableCell>
+                    <TableCell className="text-right">{claims}</TableCell>
+                    <TableCell className="text-right font-semibold">{formatCurrency(amount)}</TableCell>
+                    <TableCell className="text-right">{percent}%</TableCell>
+                    <TableCell><div className="w-32"><Progress value={percent} className="h-2" /></div></TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

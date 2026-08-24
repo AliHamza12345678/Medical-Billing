@@ -93,15 +93,21 @@ export default function RevenueReportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {monthlyData.map((m) => (
-                <TableRow key={m.month}>
-                  <TableCell className="font-medium">{m.month}</TableCell>
-                  <TableCell className="text-right font-semibold">{formatCurrency(m.revenue)}</TableCell>
-                  <TableCell className="text-right">{m.claims}</TableCell>
-                  <TableCell className="text-right text-emerald-600 dark:text-emerald-400">{m.paid}</TableCell>
-                  <TableCell className="text-right">{m.claims > 0 ? ((m.paid / m.claims) * 100).toFixed(1) : 0}%</TableCell>
-                </TableRow>
-              ))}
+              {monthlyData.map((m, idx) => {
+                const revenue = Number(m?.revenue || 0);
+                const claims = Number(m?.claims || 0);
+                const paid = Number(m?.paid || 0);
+                const paidRate = claims > 0 ? ((paid / claims) * 100).toFixed(1) : '0.0';
+                return (
+                  <TableRow key={m?.month || idx}>
+                    <TableCell className="font-medium">{m?.month || '—'}</TableCell>
+                    <TableCell className="text-right font-semibold">{formatCurrency(revenue)}</TableCell>
+                    <TableCell className="text-right">{claims}</TableCell>
+                    <TableCell className="text-right text-emerald-600 dark:text-emerald-400">{paid}</TableCell>
+                    <TableCell className="text-right">{paidRate}%</TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
