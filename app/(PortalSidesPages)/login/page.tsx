@@ -45,7 +45,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err) {
       console.error('[LOGIN_ERROR]', err);
       setErrorMessage('An unexpected error occurred. Please try again.');

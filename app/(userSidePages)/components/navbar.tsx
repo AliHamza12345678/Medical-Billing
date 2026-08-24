@@ -22,6 +22,24 @@ interface NavLink {
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
+
+  React.useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data?.user) {
+          setUser(data.data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+    window.location.href = '/login';
+  };
 
   // Navigation Links with Dropdown Items
   const navLinks: NavLink[] = [
@@ -106,17 +124,41 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* Right Section: Button & Mobile Toggle */}
-        <div className="flex items-center gap-4">
-          <Link
-            href="/register"
-            className="hidden sm:flex bg-[#00c2cb] hover:bg-[#00a6af] text-white text-xs font-bold tracking-wider px-6 py-3 rounded-full items-center gap-3 transition-all shadow-lg"
-          >
-            REGISTER
-            <span className="bg-white text-[#00c2cb] p-1 rounded-full flex items-center justify-center">
-              <FaArrowRight className="w-3 h-3" />
-            </span>
-          </Link>
+        {/* Right Section: Auth Buttons */}
+        <div className="flex items-center gap-3">
+          {user ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="hidden sm:flex bg-[#00c2cb] hover:bg-[#00a6af] text-white text-xs font-bold tracking-wider px-5 py-2.5 rounded-full items-center gap-2 transition-all shadow-lg"
+              >
+                DASHBOARD
+                <FaArrowRight className="w-3 h-3" />
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="hidden sm:flex bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold tracking-wider px-4 py-2.5 rounded-full transition-all"
+              >
+                LOGOUT
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="hidden sm:flex bg-white/10 hover:bg-white/20 text-white border border-white/20 text-xs font-bold tracking-wider px-4 py-2.5 rounded-full transition-all"
+              >
+                SIGN IN
+              </Link>
+              <Link
+                href="/register"
+                className="hidden sm:flex bg-[#00c2cb] hover:bg-[#00a6af] text-white text-xs font-bold tracking-wider px-5 py-2.5 rounded-full items-center gap-2 transition-all shadow-lg"
+              >
+                REGISTER
+                <FaArrowRight className="w-3 h-3" />
+              </Link>
+            </>
+          )}
 
           {/* Mobile Hamburger Menu Toggle */}
           <button 

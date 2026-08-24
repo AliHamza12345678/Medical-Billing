@@ -29,10 +29,10 @@ export interface RateLimitResult {
  */
 export class RateLimiter {
   private static categoryConfigs: Record<RateLimitCategory, RateLimitConfig> = {
-    AUTH:      { maxRequests: 5,   windowSeconds: 900, failClosed: true },   // 5 req per 15 min
-    PAYMENT:   { maxRequests: 10,  windowSeconds: 60,  failClosed: true },   // 10 req per min
-    EXPENSIVE: { maxRequests: 10,  windowSeconds: 60,  failClosed: false },  // 10 req per min
-    API:       { maxRequests: 100, windowSeconds: 60,  failClosed: false },  // 100 req per min
+    AUTH:      { maxRequests: 50,  windowSeconds: 60, failClosed: false },  // 50 req per min (Dev friendly)
+    PAYMENT:   { maxRequests: 50,  windowSeconds: 60, failClosed: false },  // 50 req per min
+    EXPENSIVE: { maxRequests: 50,  windowSeconds: 60, failClosed: false },  // 50 req per min
+    API:       { maxRequests: 200, windowSeconds: 60, failClosed: false },  // 200 req per min
   };
 
   /**

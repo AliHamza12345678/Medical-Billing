@@ -79,7 +79,7 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } catch (err) {
       console.error('[REGISTER_ERROR]', err);
       setErrorMessage('An unexpected error occurred. Please try again.');
