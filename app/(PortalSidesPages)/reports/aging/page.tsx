@@ -39,9 +39,9 @@ export default function AgingReportPage() {
     fetchAgingReport();
   }, [fetchAgingReport]);
 
-  const donutData = bucketsData.map((b, i) => ({
-    name: b.bucket,
-    value: b.amount,
+  const donutData = (bucketsData || []).map((b, i) => ({
+    name: String(b?.bucket || 'Bucket'),
+    value: Number(b?.amount || 0),
     color: ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'][i % 5],
   }));
 
