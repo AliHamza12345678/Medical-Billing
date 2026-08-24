@@ -36,6 +36,10 @@ interface AreaChartCardProps {
 }
 
 export function AreaChartCard({ data, xKey, areas, height = 280 }: AreaChartCardProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  if (!mounted) return <div style={{ height }} className="w-full bg-muted/20 animate-pulse rounded-lg" />;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 10, right: 4, left: -8, bottom: 0 }}>
@@ -77,6 +81,10 @@ interface BarChartCardProps {
 }
 
 export function BarChartCard({ data, xKey, bars, height = 280, horizontal }: BarChartCardProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  if (!mounted) return <div style={{ height }} className="w-full bg-muted/20 animate-pulse rounded-lg" />;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 10, right: 4, left: -8, bottom: 0 }}>
@@ -110,6 +118,10 @@ interface LineChartCardProps {
 }
 
 export function LineChartCard({ data, xKey, lines, height = 280 }: LineChartCardProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  if (!mounted) return <div style={{ height }} className="w-full bg-muted/20 animate-pulse rounded-lg" />;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 10, right: 4, left: -8, bottom: 0 }}>
@@ -133,6 +145,10 @@ interface DonutChartCardProps {
 }
 
 export function DonutChartCard({ data, height = 280, innerRadius = 60 }: DonutChartCardProps) {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  if (!mounted) return <div style={{ height }} className="w-full bg-muted/20 animate-pulse rounded-lg" />;
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
