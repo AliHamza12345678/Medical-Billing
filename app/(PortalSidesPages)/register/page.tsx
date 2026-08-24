@@ -1,126 +1,8 @@
-// 'use client';
-
-// import * as React from 'react';
-// import { useForm } from 'react-hook-form';
-// import { zodResolver } from '@hookform/resolvers/zod';
-// import { z } from 'zod';
-// import { useRouter } from 'next/navigation';
-// import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
-// import { toast } from 'sonner';
-// import { AuthLayout } from '@/components/features/auth-layout';
-// import { Button } from '@/components/ui/button';
-// import { Input } from '@/components/ui/input';
-// import { Label } from '@/components/ui/label';
-// import { Checkbox } from '@/components/ui/checkbox';
-
-// const schema = z.object({
-//   email: z.string().email('Enter a valid email address'),
-//   password: z.string().min(8, 'Password must be at least 8 characters'),
-//   remember: z.boolean().optional(),
-// });
-
-// type FormValues = z.infer<typeof schema>;
-
-// export default function LoginPage() {
-//   const router = useRouter();
-//   const [showPassword, setShowPassword] = React.useState(false);
-//   const [loading, setLoading] = React.useState(false);
-
-//   const {
-//     register,
-//     handleSubmit,
-//     formState: { errors },
-//   } = useForm<FormValues>({
-//     resolver: zodResolver(schema),
-//     defaultValues: { email: 'sarah.chen@medibill.com', password: 'password123', remember: true },
-//   });
-
-//   const onSubmit = (data: FormValues) => {
-//     setLoading(true);
-//     setTimeout(() => {
-//       setLoading(false);
-//       toast.success('Welcome back, Sarah!', {
-//         description: 'You have been signed in successfully.',
-//       });
-//       router.push('/dashboard');
-//     }, 700);
-//   };
-
-//   return (
-//     <AuthLayout title="Sign in to your account" subtitle="Enter your credentials to access the billing dashboard.">
-//       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-//         <div className="space-y-2">
-//           <Label htmlFor="email">Email address</Label>
-//           <div className="relative">
-//             <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-//             <Input id="email" type="email" placeholder="you@practice.com" className="pl-9" {...register('email')} />
-//           </div>
-//           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-//         </div>
-
-//         <div className="space-y-2">
-//           <div className="flex items-center justify-between">
-//             <Label htmlFor="password">Password</Label>
-//             <button
-//               type="button"
-//               onClick={() => router.push('/forgot-password')}
-//               className="text-xs font-medium text-primary transition-colors hover:text-primary/80"
-//             >
-//               Forgot password?
-//             </button>
-//           </div>
-//           <div className="relative">
-//             <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-//             <Input
-//               id="password"
-//               type={showPassword ? 'text' : 'password'}
-//               placeholder="••••••••"
-//               className="px-9"
-//               {...register('password')}
-//             />
-//             <button
-//               type="button"
-//               onClick={() => setShowPassword((s) => !s)}
-//               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-//             >
-//               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-//             </button>
-//           </div>
-//           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
-//         </div>
-
-//         <div className="flex items-center gap-2">
-//           <Checkbox id="remember" defaultChecked {...register('remember')} />
-//           <Label htmlFor="remember" className="text-sm text-muted-foreground">
-//             Keep me signed in for 30 days
-//           </Label>
-//         </div>
-
-//         <Button type="submit" className="w-full" disabled={loading}>
-//           {loading ? 'Signing in...' : 'Sign in'}
-//           {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
-//         </Button>
-//       </form>
-
-//       <p className="mt-6 text-center text-xs text-muted-foreground">
-//         Demo credentials are pre-filled. Just click <span className="font-medium text-foreground">Sign in</span>.
-//       </p>
-//     </AuthLayout>
-//   );
-// }
-
-
-
-
-
-
-
-
-
 'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   FaUser, 
   FaEnvelope, 
@@ -131,12 +13,17 @@ import {
   FaArrowRight,
   FaHeartbeat,
   FaUserMd,
-  FaCheckCircle
+  FaCheckCircle,
+  FaExclamationCircle
 } from 'react-icons/fa';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -154,10 +41,50 @@ export default function RegisterPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle register logic here
-    console.log(formData);
+    setErrorMessage(null);
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage('Passwords do not match');
+      return;
+    }
+
+    if (!formData.agreeTerms) {
+      setErrorMessage('You must agree to the Terms of Service and Privacy Policy');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMessage(data.error?.message || 'Registration failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('[REGISTER_ERROR]', err);
+      setErrorMessage('An unexpected error occurred. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -216,6 +143,13 @@ export default function RegisterPage() {
                 Start managing medical billing smarter in minutes
               </p>
             </div>
+
+            {errorMessage && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-600 text-sm">
+                <FaExclamationCircle className="w-5 h-5 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Full Name */}
@@ -361,12 +295,15 @@ export default function RegisterPage() {
               {/* Submit */}
               <button
                 type="submit"
-                className="w-full bg-[#00c2cb] hover:bg-[#00a6af] text-white font-bold tracking-wider py-3.5 rounded-full flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl mt-2"
+                disabled={loading}
+                className="w-full bg-[#00c2cb] hover:bg-[#00a6af] disabled:opacity-50 text-white font-bold tracking-wider py-3.5 rounded-full flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl mt-2"
               >
-                Create Account
-                <span className="bg-white text-[#00c2cb] p-1 rounded-full flex items-center justify-center">
-                  <FaArrowRight className="w-3 h-3" />
-                </span>
+                {loading ? 'Creating Account...' : 'Create Account'}
+                {!loading && (
+                  <span className="bg-white text-[#00c2cb] p-1 rounded-full flex items-center justify-center">
+                    <FaArrowRight className="w-3 h-3" />
+                  </span>
+                )}
               </button>
             </form>
 

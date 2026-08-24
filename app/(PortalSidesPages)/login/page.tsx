@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   FaEnvelope, 
   FaLock, 
@@ -9,19 +10,47 @@ import {
   FaEyeSlash, 
   FaArrowRight,
   FaHeartbeat,
-  FaShieldAlt
+  FaShieldAlt,
+  FaExclamationCircle
 } from 'react-icons/fa';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log({ email, password, remember });
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMessage(data.error?.message || 'Invalid email address or password');
+        setLoading(false);
+        return;
+      }
+
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('[LOGIN_ERROR]', err);
+      setErrorMessage('An unexpected error occurred. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -76,6 +105,13 @@ export default function LoginPage() {
                 Enter your credentials to access your billing dashboard
               </p>
             </div>
+
+            {errorMessage && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-600 text-sm">
+                <FaExclamationCircle className="w-5 h-5 shrink-0" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email */}
@@ -144,12 +180,15 @@ export default function LoginPage() {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-[#00c2cb] hover:bg-[#00a6af] text-white font-bold tracking-wider py-3.5 rounded-full flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl mt-2"
+                disabled={loading}
+                className="w-full bg-[#00c2cb] hover:bg-[#00a6af] disabled:opacity-50 text-white font-bold tracking-wider py-3.5 rounded-full flex items-center justify-center gap-3 transition-all shadow-lg hover:shadow-xl mt-2"
               >
-                Sign In
-                <span className="bg-white text-[#00c2cb] p-1 rounded-full flex items-center justify-center">
-                  <FaArrowRight className="w-3 h-3" />
-                </span>
+                {loading ? 'Signing In...' : 'Sign In'}
+                {!loading && (
+                  <span className="bg-white text-[#00c2cb] p-1 rounded-full flex items-center justify-center">
+                    <FaArrowRight className="w-3 h-3" />
+                  </span>
+                )}
               </button>
             </form>
 

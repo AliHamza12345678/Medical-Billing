@@ -98,7 +98,7 @@ export default function TestimonialsGrid() {
 
               {/* Patient Review Content */}
               <p className="text-slate-600 text-xs sm:text-sm leading-relaxed max-w-xs pt-1">
-                "{item.review}"
+                &quot;{item.review}&quot;
               </p>
 
             </div>

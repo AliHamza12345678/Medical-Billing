@@ -21,11 +21,28 @@ export default function AddPatientPage() {
         ]}
       />
       <PatientForm
-        onSubmit={() => {
-          toast.success('Patient registered', {
-            description: 'The new patient has been added successfully.',
-          });
-          router.push('/patients');
+        onSubmit={async (formData) => {
+          try {
+            const res = await fetch('/api/patients', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(formData),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+              toast.success('Patient registered', {
+                description: `Patient ${formData.firstName} ${formData.lastName} has been added.`,
+              });
+              router.push('/patients');
+            } else {
+              toast.error('Registration failed', {
+                description: data.error?.message || 'Failed to save patient record',
+              });
+            }
+          } catch (err) {
+            console.error('[CREATE_PATIENT_ERROR]', err);
+            toast.error('Error', { description: 'Unexpected network error' });
+          }
         }}
         onCancel={() => router.push('/patients')}
         submitLabel="Register Patient"

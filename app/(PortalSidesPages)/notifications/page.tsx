@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useState, useEffect } from 'react';
 import {
   CreditCard, CheckCircle2, XCircle, FileText, ShieldCheck, FileCheck, AlertTriangle,
   Bell, Check, Trash2, Filter,
@@ -13,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { timeAgo } from '@/lib/format';
-import { notifications } from '@/data/notifications';
+import { notifications as fallbackNotifications } from '@/data/notifications';
 import type { AppNotification, NotificationType } from '@/types';
 
 const iconMap: Record<NotificationType, { icon: typeof Bell; color: string }> = {
@@ -26,15 +27,68 @@ const iconMap: Record<NotificationType, { icon: typeof Bell; color: string }> = 
   denial_received: { icon: AlertTriangle, color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400' },
 };
 
+import { useRealtimeEvents } from '@/hooks/use-realtime-events';
+
 export default function NotificationsPage() {
-  const [items, setItems] = React.useState<AppNotification[]>(notifications);
-  const [tab, setTab] = React.useState('all');
+  const [items, setItems] = useState<AppNotification[]>([]);
+  const [tab, setTab] = useState('all');
+  const [loading, setLoading] = useState(true);
+
+  const fetchNotifications = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/notifications');
+      const data = await res.json();
+      if (res.ok && data.success && Array.isArray(data.data)) {
+        setItems(data.data);
+      } else {
+        setItems(fallbackNotifications);
+      }
+    } catch (err) {
+      console.error('[FETCH_NOTIFICATIONS_ERROR]', err);
+      setItems(fallbackNotifications);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Real-time SSE event stream hook
+  useRealtimeEvents(React.useCallback(() => {
+    fetchNotifications();
+  }, [fetchNotifications]));
 
   const filtered = tab === 'unread' ? items.filter((n) => !n.read) : tab === 'high' ? items.filter((n) => n.priority === 'high') : items;
 
-  const markAllRead = () => setItems((prev) => prev.map((n) => ({ ...n, read: true })));
-  const markRead = (id: string) => setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  const remove = (id: string) => setItems((prev) => prev.filter((n) => n.id !== id));
+  const markAllRead = async () => {
+    try {
+      await fetch('/api/notifications/read-all', { method: 'POST' });
+      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('[MARK_ALL_READ_ERROR]', err);
+    }
+  };
+
+  const markRead = async (id: string) => {
+    try {
+      await fetch(`/api/notifications/${id}`, { method: 'PATCH' });
+      setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    } catch (err) {
+      console.error('[MARK_READ_ERROR]', err);
+    }
+  };
+
+  const remove = async (id: string) => {
+    try {
+      await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
+      setItems((prev) => prev.filter((n) => n.id !== id));
+    } catch (err) {
+      console.error('[DELETE_NOTIF_ERROR]', err);
+    }
+  };
 
   const unreadCount = items.filter((n) => !n.read).length;
 
@@ -71,7 +125,9 @@ export default function NotificationsPage() {
                   </div>
                 ) : (
                   filtered.map((n) => {
-                    const { icon: Icon, color } = iconMap[n.type];
+                    const iconConfig = iconMap[n.type] || { icon: Bell, color: 'bg-primary/10 text-primary' };
+                    const Icon = iconConfig.icon;
+                    const color = iconConfig.color;
                     return (
                       <div key={n.id} className={cn('flex items-start gap-4 px-6 py-4 transition-colors hover:bg-accent', !n.read && 'bg-primary/[0.03]')}>
                         <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', color)}>

@@ -1,6 +1,8 @@
 'use client';
 
-import { Download, Hourglass } from 'lucide-react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
+import { Download } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { PageHeader } from '@/components/features/page-header';
 import { BarChartCard, DonutChartCard } from '@/components/features/charts';
@@ -8,17 +10,42 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { agingReport, outstandingBuckets } from '@/data/reports';
 import { formatCurrency } from '@/lib/format';
 
-const donutData = outstandingBuckets.map((b, i) => ({
-  name: b.bucket,
-  value: b.amount,
-  color: ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'][i],
-}));
-
 export default function AgingReportPage() {
-  const total = agingReport.reduce((s, r) => s + r.amount, 0);
+  const [bucketsData, setBucketsData] = useState<any[]>([]);
+  const [agingData, setAgingData] = useState<any[]>([]);
+  const [totalVal, setTotalVal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAgingReport = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/reports/aging');
+      const data = await res.json();
+      if (res.ok && data.success && data.data) {
+        if (Array.isArray(data.data.outstandingBuckets)) setBucketsData(data.data.outstandingBuckets);
+        if (Array.isArray(data.data.agingReport)) setAgingData(data.data.agingReport);
+        if (data.data.totalAmount !== undefined) setTotalVal(data.data.totalAmount);
+      }
+    } catch (err) {
+      console.error('[FETCH_AGING_REPORT_ERROR]', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAgingReport();
+  }, [fetchAgingReport]);
+
+  const donutData = bucketsData.map((b, i) => ({
+    name: b.bucket,
+    value: b.amount,
+    color: ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'][i % 5],
+  }));
+
+  const totalClaims = agingData.reduce((s, r) => s + r.claims, 0);
 
   return (
     <DashboardShell>
@@ -33,7 +60,7 @@ export default function AgingReportPage() {
         <Card className="lg:col-span-2">
           <CardHeader><CardTitle className="text-base">Outstanding by Bucket</CardTitle><CardDescription>Amounts owed grouped by days outstanding</CardDescription></CardHeader>
           <CardContent>
-            <BarChartCard data={outstandingBuckets} xKey="bucket" bars={[{ key: 'amount', color: 'hsl(var(--chart-3))', name: 'Outstanding' }]} />
+            <BarChartCard data={bucketsData} xKey="bucket" bars={[{ key: 'amount', color: 'hsl(var(--chart-3))', name: 'Outstanding' }]} />
           </CardContent>
         </Card>
         <Card>
@@ -43,7 +70,7 @@ export default function AgingReportPage() {
       </div>
 
       <Card className="mt-6">
-        <CardHeader><CardTitle className="text-base">Detailed Aging</CardTitle><CardDescription>{formatCurrency(total)} total outstanding across {agingReport.reduce((s, r) => s + r.claims, 0)} claims</CardDescription></CardHeader>
+        <CardHeader><CardTitle className="text-base">Detailed Aging</CardTitle><CardDescription>{formatCurrency(totalVal)} total outstanding across {totalClaims} claims</CardDescription></CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -56,7 +83,7 @@ export default function AgingReportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {agingReport.map((row) => (
+              {agingData.map((row) => (
                 <TableRow key={row.bucket}>
                   <TableCell className="font-medium">{row.bucket}</TableCell>
                   <TableCell className="text-right">{row.claims}</TableCell>

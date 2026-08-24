@@ -1,6 +1,8 @@
 'use client';
 
-import { Download, TrendingUp } from 'lucide-react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
+import { Download } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { PageHeader } from '@/components/features/page-header';
 import { AreaChartCard, BarChartCard } from '@/components/features/charts';
@@ -9,14 +11,40 @@ import { Button } from '@/components/ui/button';
 import {
   Table, TableHeader, TableBody, TableHead, TableRow, TableCell,
 } from '@/components/ui/table';
-import { monthlyRevenue, revenueTrend } from '@/data/reports';
 import { formatCurrency } from '@/lib/format';
 
 export default function RevenueReportPage() {
-  const totalRevenue = monthlyRevenue.reduce((s, m) => s + m.revenue, 0);
-  const totalClaims = monthlyRevenue.reduce((s, m) => s + m.claims, 0);
-  const totalPaid = monthlyRevenue.reduce((s, m) => s + m.paid, 0);
-  const avgMonthly = totalRevenue / monthlyRevenue.length;
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [trendData, setTrendData] = useState<any[]>([]);
+  const [totalRevenueVal, setTotalRevenueVal] = useState(0);
+  const [avgMonthlyVal, setAvgMonthlyVal] = useState(0);
+  const [totalClaimsVal, setTotalClaimsVal] = useState(0);
+  const [totalPaidVal, setTotalPaidVal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchRevenueReport = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/reports/revenue');
+      const data = await res.json();
+      if (res.ok && data.success && data.data) {
+        if (data.data.totalRevenue !== undefined) setTotalRevenueVal(data.data.totalRevenue);
+        if (data.data.avgMonthly !== undefined) setAvgMonthlyVal(data.data.avgMonthly);
+        if (data.data.totalClaims !== undefined) setTotalClaimsVal(data.data.totalClaims);
+        if (data.data.totalPaid !== undefined) setTotalPaidVal(data.data.totalPaid);
+        if (Array.isArray(data.data.monthlyRevenue)) setMonthlyData(data.data.monthlyRevenue);
+        if (Array.isArray(data.data.revenueTrend)) setTrendData(data.data.revenueTrend);
+      }
+    } catch (err) {
+      console.error('[FETCH_REVENUE_REPORT_ERROR]', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRevenueReport();
+  }, [fetchRevenueReport]);
 
   return (
     <DashboardShell>
@@ -27,23 +55,23 @@ export default function RevenueReportPage() {
         actions={<Button variant="outline"><Download className="mr-2 h-4 w-4" /> Export PDF</Button>}
       />
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatBox label="Total Revenue" value={formatCurrency(totalRevenue)} />
-        <StatBox label="Avg Monthly" value={formatCurrency(avgMonthly)} />
-        <StatBox label="Total Claims" value={String(totalClaims)} />
-        <StatBox label="Claims Paid" value={String(totalPaid)} />
+        <StatBox label="Total Revenue" value={formatCurrency(totalRevenueVal)} />
+        <StatBox label="Avg Monthly" value={formatCurrency(avgMonthlyVal)} />
+        <StatBox label="Total Claims" value={String(totalClaimsVal)} />
+        <StatBox label="Claims Paid" value={String(totalPaidVal)} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle className="text-base">Revenue Over Time</CardTitle><CardDescription>Monthly revenue trend</CardDescription></CardHeader>
           <CardContent>
-            <AreaChartCard data={monthlyRevenue} xKey="month" areas={[{ key: 'revenue', color: 'hsl(var(--chart-1))', name: 'Revenue' }]} />
+            <AreaChartCard data={monthlyData} xKey="month" areas={[{ key: 'revenue', color: 'hsl(var(--chart-1))', name: 'Revenue' }]} />
           </CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle className="text-base">Revenue vs Target</CardTitle><CardDescription>Actual performance against goals</CardDescription></CardHeader>
           <CardContent>
-            <BarChartCard data={revenueTrend} xKey="month" bars={[
+            <BarChartCard data={trendData} xKey="month" bars={[
               { key: 'revenue', color: 'hsl(var(--chart-1))', name: 'Revenue' },
               { key: 'target', color: 'hsl(var(--chart-3))', name: 'Target' },
             ]} />
@@ -65,13 +93,13 @@ export default function RevenueReportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {monthlyRevenue.map((m) => (
+              {monthlyData.map((m) => (
                 <TableRow key={m.month}>
                   <TableCell className="font-medium">{m.month}</TableCell>
                   <TableCell className="text-right font-semibold">{formatCurrency(m.revenue)}</TableCell>
                   <TableCell className="text-right">{m.claims}</TableCell>
                   <TableCell className="text-right text-emerald-600 dark:text-emerald-400">{m.paid}</TableCell>
-                  <TableCell className="text-right">{((m.paid / m.claims) * 100).toFixed(1)}%</TableCell>
+                  <TableCell className="text-right">{m.claims > 0 ? ((m.paid / m.claims) * 100).toFixed(1) : 0}%</TableCell>
                 </TableRow>
               ))}
             </TableBody>

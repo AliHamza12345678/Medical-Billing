@@ -161,7 +161,7 @@ export default function FooterWithCTABanner() {
                                 <div>
                                     <h4 className="font-bold text-[#00c5c8] text-sm">Operations – China</h4>
                                     <p className="text-zinc-400 mt-1 leading-relaxed">
-                                        Shanghai Major Financial Hub & China's Largest Cities
+                                        Shanghai Major Financial Hub &amp; China&apos;s Largest Cities
                                     </p>
                                 </div>
                             </div>

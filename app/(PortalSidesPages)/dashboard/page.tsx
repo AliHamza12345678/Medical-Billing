@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -27,15 +28,14 @@ import {
   BarChartCard,
   LineChartCard,
 } from '@/components/features/charts';
-import { getIcon } from '@/lib/icons';
 import { formatCurrency, timeAgo } from '@/lib/format';
-import { dashboardData } from '@/data/dashboard';
+import { dashboardData as fallbackStats } from '@/data/dashboard';
 import {
-  monthlyRevenue,
-  claimStatusBreakdown,
-  revenueTrend,
-  outstandingBuckets,
-  recentActivity,
+  monthlyRevenue as fallbackMonthly,
+  claimStatusBreakdown as fallbackStatus,
+  revenueTrend as fallbackTrend,
+  outstandingBuckets as fallbackBuckets,
+  recentActivity as fallbackActivity,
 } from '@/data/reports';
 
 const iconMap: Record<string, typeof Users> = {
@@ -43,11 +43,50 @@ const iconMap: Record<string, typeof Users> = {
 };
 
 export default function DashboardPage() {
+  const [stats, setStats] = useState<any[]>([]);
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [statusData, setStatusData] = useState<any[]>([]);
+  const [bucketsData, setBucketsData] = useState<any[]>([]);
+  const [trendData, setTrendData] = useState<any[]>([]);
+  const [quickStats, setQuickStats] = useState({
+    cleanClaimRate: '0.0%',
+    denialRate: '0.0%',
+    collectionRate: '0.0%',
+    avgDaysInAR: '0 days',
+  });
+  const [activityData, setActivityData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDashboardMetrics = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/dashboard/stats');
+      const data = await res.json();
+      if (res.ok && data.success && data.data) {
+        if (Array.isArray(data.data.dashboardStats)) setStats(data.data.dashboardStats);
+        if (Array.isArray(data.data.monthlyRevenue)) setMonthlyData(data.data.monthlyRevenue);
+        if (Array.isArray(data.data.claimStatusBreakdown)) setStatusData(data.data.claimStatusBreakdown);
+        if (Array.isArray(data.data.outstandingBuckets)) setBucketsData(data.data.outstandingBuckets);
+        if (Array.isArray(data.data.revenueTrend)) setTrendData(data.data.revenueTrend);
+        if (data.data.quickStats) setQuickStats(data.data.quickStats);
+        if (Array.isArray(data.data.recentActivity)) setActivityData(data.data.recentActivity);
+      }
+    } catch (err) {
+      console.error('[FETCH_DASHBOARD_ERROR]', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardMetrics();
+  }, [fetchDashboardMetrics]);
+
   return (
     <DashboardShell>
       <PageHeader
         title="Dashboard"
-        description="Welcome back, Sarah. Here's what's happening at your practice today."
+        description="Welcome back. Here's what's happening at your practice today."
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Dashboard' }]}
         actions={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -60,7 +99,7 @@ export default function DashboardPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {dashboardData.slice(0, 4).map((stat, i) => (
+        {stats.slice(0, 4).map((stat, i) => (
           <StatCard
             key={stat.id}
             label={stat.label}
@@ -75,7 +114,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-7">
-        {dashboardData.slice(4).map((stat, i) => (
+        {stats.slice(4).map((stat, i) => (
           <StatCard
             key={stat.id}
             label={stat.label}
@@ -98,7 +137,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
               <ArrowUpRight className="h-4 w-4" />
-              +12.5%
+              Live DB
             </div>
           </CardHeader>
           <CardContent>
@@ -109,14 +148,14 @@ export default function DashboardPage() {
               </TabsList>
               <TabsContent value="revenue">
                 <AreaChartCard
-                  data={monthlyRevenue}
+                  data={monthlyData}
                   xKey="month"
                   areas={[{ key: 'revenue', color: 'hsl(var(--chart-1))', name: 'Revenue' }]}
                 />
               </TabsContent>
               <TabsContent value="claims">
                 <BarChartCard
-                  data={monthlyRevenue}
+                  data={monthlyData}
                   xKey="month"
                   bars={[
                     { key: 'claims', color: 'hsl(var(--chart-1))', name: 'Claims' },
@@ -134,7 +173,7 @@ export default function DashboardPage() {
             <CardDescription>Distribution of all claims</CardDescription>
           </CardHeader>
           <CardContent>
-            <DonutChartCard data={claimStatusBreakdown} height={260} />
+            <DonutChartCard data={statusData} height={260} />
           </CardContent>
         </Card>
       </div>
@@ -147,7 +186,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <LineChartCard
-              data={revenueTrend}
+              data={trendData}
               xKey="month"
               lines={[
                 { key: 'revenue', color: 'hsl(var(--chart-1))', name: 'Revenue' },
@@ -166,7 +205,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <BarChartCard
-              data={outstandingBuckets}
+              data={bucketsData}
               xKey="bucket"
               bars={[{ key: 'amount', color: 'hsl(var(--chart-3))', name: 'Outstanding' }]}
               height={260}
@@ -178,16 +217,15 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="text-base">Quick Stats</CardTitle>
-              <CardDescription>This month at a glance</CardDescription>
+              <CardDescription>Live metrics calculated from database</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 overflow-hidden">
             {[
-              { label: 'Avg. claim processing time', value: '14.2 days', trend: 'down', color: 'text-emerald-600 dark:text-emerald-400' },
-              { label: 'Clean claim rate', value: '94.8%', trend: 'up', color: 'text-emerald-600 dark:text-emerald-400' },
-              { label: 'Denial rate', value: '4.2%', trend: 'down', color: 'text-emerald-600 dark:text-emerald-400' },
-              { label: 'Collection rate', value: '91.3%', trend: 'up', color: 'text-emerald-600 dark:text-emerald-400' },
-              { label: 'Days in A/R', value: '32 days', trend: 'down', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: 'Clean claim rate', value: quickStats.cleanClaimRate, trend: 'up', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: 'Denial rate', value: quickStats.denialRate, trend: 'down', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: 'Collection rate', value: quickStats.collectionRate, trend: 'up', color: 'text-emerald-600 dark:text-emerald-400' },
+              { label: 'Days in A/R', value: quickStats.avgDaysInAR, trend: 'down', color: 'text-emerald-600 dark:text-emerald-400' },
             ].map((s) => (
               <div key={s.label} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-sm text-muted-foreground">{s.label}</span>
@@ -215,7 +253,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
-            {recentActivity.map((activity, i) => (
+            {activityData.map((activity) => (
               <motion.div
                 key={activity.id}
                 initial={{ opacity: 0 }}
@@ -225,7 +263,7 @@ export default function DashboardPage() {
               >
                 <Avatar className="h-9 w-9">
                   <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
-                    {activity.actor.split(' ').map((w) => w[0]).join('').slice(0, 2)}
+                    {(activity.actor || 'System').split(' ').map((w: string) => w[0]).join('').slice(0, 2)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">

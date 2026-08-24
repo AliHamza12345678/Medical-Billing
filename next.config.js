@@ -7,6 +7,9 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: { unoptimized: true },
+  experimental: {
+    serverComponentsExternalPackages: ['bullmq', 'ioredis'],
+  },
   webpack: (config, { dev, isServer }) => {
     if (!dev && isServer) {
       config.optimization = {

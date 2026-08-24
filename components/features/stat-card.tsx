@@ -12,16 +12,22 @@ interface StatCardProps {
   change?: number;
   trend?: 'up' | 'down' | 'flat';
   icon: LucideIcon;
-  color?: 'primary' | 'success' | 'warning' | 'destructive' | 'info';
+  color?: 'primary' | 'success' | 'warning' | 'destructive' | 'info' | string;
   index?: number;
 }
 
-const colorMap = {
+const colorMap: Record<string, { bg: string; text: string }> = {
   primary: { bg: 'bg-primary/10', text: 'text-primary' },
   success: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
   warning: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400' },
   destructive: { bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400' },
   info: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
+  amber: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400' },
+  emerald: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
+  blue: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
+  violet: { bg: 'bg-violet-500/10', text: 'text-violet-600 dark:text-violet-400' },
+  purple: { bg: 'bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400' },
+  rose: { bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400' },
 };
 
 export function StatCard({
@@ -33,7 +39,7 @@ export function StatCard({
   color = 'primary',
   index = 0,
 }: StatCardProps) {
-  const c = colorMap[color];
+  const c = colorMap[color] || colorMap.primary;
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
   const trendColor =
     trend === 'up'

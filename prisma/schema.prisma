@@ -1,0 +1,611 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PatientStatus {
+  Active
+  Inactive
+  New
+}
+
+enum Gender {
+  Male
+  Female
+  Other
+}
+
+enum ClaimStatus {
+  Submitted
+  Pending
+  Paid
+  Denied
+  Rejected
+}
+
+enum ClaimPriority {
+  Routine
+  Urgent
+  Emergency
+}
+
+enum PaymentStatus {
+  Paid
+  Pending
+  Failed
+  Refunded
+  Partial
+}
+
+enum PaymentMethod {
+  Insurance
+  Cash
+  CreditCard
+  Check
+  ACH
+  HSA
+}
+
+enum UserRole {
+  Administrator
+  BillingManager
+  Coder
+  FrontDesk
+  Provider
+}
+
+enum AuditAction {
+  Create
+  Update
+  Delete
+  Login
+  Logout
+  View
+  Export
+}
+
+model User {
+  id                   String               @id @default(uuid())
+  name                 String
+  email                String               @unique
+  passwordHash         String               @default("")
+  role                 UserRole             @default(BillingManager)
+  status               String               @default("Active")
+  lastLogin            DateTime?
+  failedLoginAttempts  Int                  @default(0)
+  lockedUntil          DateTime?
+  avatarColor          String               @default("bg-blue-500")
+  permissions          String[]
+  isDeleted            Boolean              @default(false)
+  deletedAt            DateTime?
+  sessions             Session[]
+  resetTokens          PasswordResetToken[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([email])
+  @@index([role])
+  @@index([isDeleted])
+}
+
+model Session {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  ipAddress   String?
+  userAgent   String?
+  lastUsedAt  DateTime @default(now())
+  expiresAt   DateTime
+  revoked     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([token])
+  @@index([revoked])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String
+  usersCount  Int      @default(0)
+  permissions String[]
+  system      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  module      String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([module])
+}
+
+model Patient {
+  id           String             @id @default(uuid())
+  mrn          String             @unique
+  firstName    String
+  lastName     String
+  dateOfBirth  DateTime
+  gender       Gender
+  phone        String
+  email        String
+  address      String
+  city         String
+  state        String
+  zip          String
+  status       PatientStatus      @default(Active)
+  balance      Decimal            @default(0.00) @db.Decimal(12, 2)
+  lastVisit    DateTime?
+  registeredOn DateTime           @default(now())
+  avatarColor  String             @default("bg-blue-500")
+  isDeleted    Boolean            @default(false)
+  deletedAt    DateTime?
+  insurances   PatientInsurance[]
+  documents    PatientDocument[]
+  claims       Claim[]
+  payments     Payment[]
+  refunds      Refund[]
+  ledger       FinancialLedger[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([lastName, firstName])
+  @@index([mrn])
+  @@index([status])
+  @@index([isDeleted])
+  @@index([isDeleted, registeredOn(sort: Desc), id])
+  @@index([isDeleted, status])
+}
+
+model PatientInsurance {
+  id              String    @id @default(uuid())
+  patientId       String
+  patient         Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  providerName    String
+  providerId      String?
+  memberId        String
+  groupNumber     String
+  planName        String
+  priority        String    @default("Primary")
+  status          String    @default("Active")
+  effectiveDate   DateTime
+  expiryDate      DateTime?
+  copay           Decimal   @default(0.00) @db.Decimal(12, 2)
+  deductible      Decimal   @default(0.00) @db.Decimal(12, 2)
+  deductibleMet   Decimal   @default(0.00) @db.Decimal(12, 2)
+  coveragePercent Decimal   @default(80.00) @db.Decimal(5, 2)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([patientId])
+  @@index([memberId])
+}
+
+model PatientDocument {
+  id         String   @id @default(uuid())
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  name       String
+  type       String
+  uploadedOn DateTime @default(now())
+  size       String
+  fileUrl    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([patientId])
+}
+
+model InsuranceProvider {
+  id                String   @id @default(uuid())
+  name              String
+  payerId           String   @unique
+  type              String
+  phone             String
+  email             String
+  address           String
+  city              String
+  state             String
+  zip               String
+  status            String   @default("Active")
+  claimsSubmitted   Int      @default(0)
+  claimsPaid        Int      @default(0)
+  avgProcessingDays Decimal  @default(14.00) @db.Decimal(5, 2)
+  totalRevenue      Decimal  @default(0.00) @db.Decimal(12, 2)
+  logoColor         String   @default("bg-blue-600")
+  isDeleted         Boolean  @default(false)
+  deletedAt         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([payerId])
+  @@index([status])
+}
+
+model EligibilityVerification {
+  id                  String   @id @default(uuid())
+  patientId           String
+  patientName         String
+  provider            String
+  memberId            String
+  status              String
+  verificationDate    DateTime @default(now())
+  copay               Decimal  @db.Decimal(12, 2)
+  deductibleRemaining Decimal  @db.Decimal(12, 2)
+  coveragePercent     Decimal  @db.Decimal(5, 2)
+  planName            String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([verificationDate])
+}
+
+model Authorization {
+  id                  String    @id @default(uuid())
+  authorizationNumber String    @unique
+  patientId           String
+  patientName         String
+  provider            String
+  procedure           String
+  status              String
+  requestedDate       DateTime
+  approvedDate        DateTime?
+  validFrom           DateTime
+  validTo             DateTime
+  visitsApproved      Int
+  visitsUsed          Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([patientId])
+  @@index([authorizationNumber])
+  @@index([status])
+}
+
+model ProcedureCode {
+  id             String   @id @default(uuid())
+  cptCode        String   @unique
+  description    String
+  category       String
+  standardCharge Decimal  @db.Decimal(12, 2)
+  medicareRate   Decimal  @db.Decimal(12, 2)
+  rvu            Decimal  @db.Decimal(8, 4)
+  status         String   @default("Active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([cptCode])
+  @@index([category])
+}
+
+model DiagnosisCode {
+  id          String   @id @default(uuid())
+  icd10Code   String   @unique
+  description String
+  category    String
+  status      String   @default("Active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([icd10Code])
+  @@index([category])
+}
+
+model ChargeEntry {
+  id               String    @id @default(uuid())
+  patientId        String
+  patientName      String
+  cptCode          String
+  cptDescription   String
+  icd10Code        String
+  icd10Description String
+  quantity         Int       @default(1)
+  unitCharge       Decimal   @db.Decimal(12, 2)
+  totalCharge      Decimal   @db.Decimal(12, 2)
+  provider         String
+  serviceDate      DateTime
+  status           String    @default("Draft")
+  isDeleted        Boolean   @default(false)
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([patientId])
+  @@index([serviceDate])
+  @@index([status])
+  @@index([isDeleted])
+}
+
+model Claim {
+  id                    String               @id @default(uuid())
+  claimNumber           String               @unique
+  patientId             String
+  patient               Patient              @relation(fields: [patientId], references: [id])
+  patientName           String
+  provider              String
+  insuranceProvider     String
+  serviceDate           DateTime
+  submissionDate        DateTime             @default(now())
+  billedAmount          Decimal              @db.Decimal(12, 2)
+  paidAmount            Decimal              @default(0.00) @db.Decimal(12, 2)
+  patientResponsibility Decimal              @default(0.00) @db.Decimal(12, 2)
+  status                ClaimStatus          @default(Submitted)
+  priority              ClaimPriority       @default(Routine)
+  cptCodes              String[]
+  icd10Codes            String[]
+  deniedReason          String?
+  ageDays               Int                  @default(0)
+  isDeleted             Boolean              @default(false)
+  deletedAt             DateTime?
+  lines                 ClaimLine[]
+  timeline              ClaimTimelineEvent[]
+  allocations           PaymentAllocation[]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  @@index([patientId])
+  @@index([claimNumber])
+  @@index([status])
+  @@index([serviceDate])
+  @@index([isDeleted])
+  @@index([isDeleted, submissionDate(sort: Desc), id])
+  @@index([isDeleted, status, submissionDate(sort: Desc)])
+  @@index([isDeleted, insuranceProvider])
+}
+
+model ClaimLine {
+  id             String   @id @default(uuid())
+  claimId        String
+  claim          Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  cptCode        String
+  cptDescription String
+  icd10Codes     String[]
+  units          Int      @default(1)
+  unitCharge     Decimal  @db.Decimal(12, 2)
+  totalCharge    Decimal  @db.Decimal(12, 2)
+  allowedAmount  Decimal  @default(0.00) @db.Decimal(12, 2)
+  paidAmount     Decimal  @default(0.00) @db.Decimal(12, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([claimId])
+  @@index([cptCode])
+}
+
+model ClaimTimelineEvent {
+  id          String   @id @default(uuid())
+  claimId     String
+  claim       Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  date        DateTime @default(now())
+  event       String
+  description String
+  actor       String
+  type        String
+  createdAt   DateTime @default(now())
+
+  @@index([claimId])
+}
+
+model Payment {
+  id            String              @id @default(uuid())
+  paymentNumber String              @unique
+  patientId     String
+  patient       Patient             @relation(fields: [patientId], references: [id])
+  patientName   String
+  amount        Decimal             @db.Decimal(12, 2)
+  method        PaymentMethod
+  status        PaymentStatus       @default(Paid)
+  date          DateTime            @default(now())
+  appliedTo     String
+  reference     String
+  type          String
+  isDeleted     Boolean             @default(false)
+  deletedAt     DateTime?
+  allocations   PaymentAllocation[]
+  refunds       Refund[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([patientId])
+  @@index([paymentNumber])
+  @@index([date])
+  @@index([type])
+  @@index([isDeleted])
+}
+
+model PaymentAllocation {
+  id          String   @id @default(uuid())
+  paymentId   String
+  payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  claimId     String?
+  claim       Claim?   @relation(fields: [claimId], references: [id])
+  invoiceId   String?
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id])
+  amount      Decimal  @db.Decimal(12, 2)
+  allocatedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([paymentId])
+  @@index([claimId])
+  @@index([invoiceId])
+}
+
+model Invoice {
+  id            String              @id @default(uuid())
+  invoiceNumber String              @unique
+  patientId     String
+  patientName   String
+  issueDate     DateTime            @default(now())
+  dueDate       DateTime
+  amount        Decimal             @db.Decimal(12, 2)
+  paidAmount    Decimal             @default(0.00) @db.Decimal(12, 2)
+  balance       Decimal             @db.Decimal(12, 2)
+  status        String              @default("Pending")
+  notes         String?
+  isDeleted     Boolean             @default(false)
+  deletedAt     DateTime?
+  items         InvoiceLineItem[]
+  allocations   PaymentAllocation[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([patientId])
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([isDeleted])
+}
+
+model InvoiceLineItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  cptCode     String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  total       Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model Refund {
+  id           String   @id @default(uuid())
+  refundNumber String   @unique
+  patientId    String
+  patient      Patient  @relation(fields: [patientId], references: [id])
+  paymentId    String?
+  payment      Payment? @relation(fields: [paymentId], references: [id])
+  amount       Decimal  @db.Decimal(12, 2)
+  reason       String
+  status       String   @default("Processed")
+  processedBy  String
+  date         DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([refundNumber])
+  @@index([paymentId])
+}
+
+model FinancialLedger {
+  id              String   @id @default(uuid())
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id])
+  transactionType String
+  referenceId     String
+  debit           Decimal  @default(0.00) @db.Decimal(12, 2)
+  credit          Decimal  @default(0.00) @db.Decimal(12, 2)
+  balanceAfter    Decimal  @db.Decimal(12, 2)
+  description     String
+  createdAt       DateTime @default(now())
+
+  @@index([patientId])
+  @@index([transactionType])
+  @@index([createdAt])
+}
+
+model Adjustment {
+  id               String   @id @default(uuid())
+  adjustmentNumber String   @unique
+  patientName      String
+  claimNumber      String
+  amount           Decimal  @db.Decimal(12, 2)
+  type             String
+  reason           String
+  date             DateTime @default(now())
+  postedBy         String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([claimNumber])
+}
+
+model FeeSchedule {
+  id             String   @id @default(uuid())
+  cptCode        String
+  description    String
+  provider       String
+  standardRate   Decimal  @db.Decimal(12, 2)
+  negotiatedRate Decimal  @db.Decimal(12, 2)
+  effectiveDate  DateTime
+  status         String   @default("Active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([cptCode])
+  @@index([provider])
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  timestamp DateTime    @default(now())
+  user      String
+  action    AuditAction
+  module    String
+  resource  String
+  details   String
+  ipAddress String      @default("127.0.0.1")
+  createdAt DateTime    @default(now())
+
+  @@index([timestamp])
+  @@index([user])
+  @@index([module])
+}
+
+model AppNotification {
+  id        String   @id @default(uuid())
+  type      String
+  title     String
+  message   String
+  timestamp DateTime @default(now())
+  read      Boolean  @default(false)
+  priority  String   @default("medium")
+  actionUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([read])
+  @@index([timestamp])
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  category    String   @default("general")
+  description String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+  @@index([category])
+}

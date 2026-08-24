@@ -86,6 +86,7 @@ export interface PatientDocument {
   type: 'Insurance Card' | 'ID' | 'Referral' | 'Medical Record' | 'Consent Form' | 'Other';
   uploadedOn: string;
   size: string;
+  fileUrl?: string;
 }
 
 export interface InsuranceProvider {

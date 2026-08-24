@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { CreditCard, Lock, ShieldCheck, ArrowLeft, Check } from 'lucide-react';
+import { CreditCard, Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { PortalLayout } from '@/components/layout/portal-layout';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ type FormValues = z.infer<typeof schema>;
 export default function PortalPayPage() {
   const router = useRouter();
   const [loading, setLoading] = React.useState(false);
+  const [balance, setBalance] = React.useState(180);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -36,13 +37,40 @@ export default function PortalPayPage() {
 
   const amount = watch('amount');
 
-  const onSubmit = () => {
+  React.useEffect(() => {
+    fetch('/api/portal/summary')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data?.outstandingBalance !== undefined) {
+          setBalance(data.data.outstandingBalance);
+        }
+      })
+      .catch((err) => console.error('[FETCH_PORTAL_BAL_ERROR]', err));
+  }, []);
+
+  const onSubmit = async (values: FormValues) => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      toast.success('Payment successful', { description: `${formatCurrency(Number(amount))} has been processed.` });
+    try {
+      const res = await fetch('/api/portal/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || 'Payment processing failed');
+      }
+
+      toast.success('Payment successful', {
+        description: `${formatCurrency(Number(values.amount))} payment [${data.data.paymentNumber}] has been processed.`,
+      });
       router.push('/portal');
-    }, 900);
+    } catch (err: any) {
+      toast.error('Payment Error', { description: err.message || 'Unable to process card payment.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -56,7 +84,7 @@ export default function PortalPayPage() {
           <CardContent className="flex items-center justify-between py-5">
             <div>
               <p className="text-sm text-primary-foreground/70">Outstanding Balance</p>
-              <p className="text-3xl font-bold">{formatCurrency(180)}</p>
+              <p className="text-3xl font-bold">{formatCurrency(balance)}</p>
             </div>
             <CreditCard className="h-10 w-10 opacity-50" />
           </CardContent>

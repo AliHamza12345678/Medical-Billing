@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { type ColumnDef } from '@tanstack/react-table';
 import {
@@ -12,10 +13,8 @@ import {
   Calendar,
   CreditCard,
   Download,
-  Upload,
   ShieldCheck,
   Stethoscope,
-  Activity,
 } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { PageHeader } from '@/components/features/page-header';
@@ -28,19 +27,38 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { getPatientById } from '@/data/patients';
-import { patientInitials } from '@/data/patients';
+import { getPatientById, patientInitials } from '@/data/patients';
 import { getClaimsByPatient } from '@/data/claims';
 import { getPaymentsByPatient } from '@/data/payments';
 import { getEligibilityByPatient, getAuthorizationsByPatient } from '@/data/insurance';
 import { formatCurrency, formatDate, age } from '@/lib/format';
-import type { Claim, Payment } from '@/types';
+import type { Patient, Claim, Payment } from '@/types';
 
 export default function PatientDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const patient = getPatientById(params.id);
+  const [patient, setPatient] = useState<Patient | null>(() => getPatientById(params.id) || null);
+  const [loading, setLoading] = useState(true);
 
-  if (!patient) {
+  const fetchPatientDetails = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/patients/${params.id}`);
+      const data = await res.json();
+      if (res.ok && data.success && data.data) {
+        setPatient(data.data);
+      }
+    } catch (err) {
+      console.error('[FETCH_PATIENT_DETAILS_ERROR]', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchPatientDetails();
+  }, [fetchPatientDetails]);
+
+  if (!patient && !loading) {
     return (
       <DashboardShell>
         <PageHeader title="Patient Not Found" breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Patients', href: '/patients' }]} />
@@ -49,26 +67,28 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
     );
   }
 
-  const claims = getClaimsByPatient(patient.id);
-  const payments = getPaymentsByPatient(patient.id);
-  const eligibility = getEligibilityByPatient(patient.id);
-  const authorizations = getAuthorizationsByPatient(patient.id);
+  if (!patient) return null;
+
+  const claims = getClaimsByPatient(patient.id) || [];
+  const payments = getPaymentsByPatient(patient.id) || [];
+  const eligibility = getEligibilityByPatient(patient.id) || [];
+  const authorizations = getAuthorizationsByPatient(patient.id) || [];
 
   const claimColumns: ColumnDef<Claim>[] = [
     { accessorKey: 'claimNumber', header: 'Claim #', cell: ({ row }) => <span className="font-mono text-xs">{row.original.claimNumber}</span> },
-    { accessorKey: 'serviceDate', header: 'Service Date', cell: ({ row }) => <span className="text-sm">{formatDate(row.original.serviceDate)}</span> },
+    { accessorKey: 'serviceDate', header: 'Service Date', cell: ({ row }) => <span className="text-sm">{formatDate(String(row.original.serviceDate))}</span> },
     { accessorKey: 'insuranceProvider', header: 'Insurer' },
-    { accessorKey: 'billedAmount', header: 'Billed', cell: ({ row }) => formatCurrency(row.original.billedAmount) },
-    { accessorKey: 'paidAmount', header: 'Paid', cell: ({ row }) => <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(row.original.paidAmount)}</span> },
+    { accessorKey: 'billedAmount', header: 'Billed', cell: ({ row }) => formatCurrency(Number(row.original.billedAmount)) },
+    { accessorKey: 'paidAmount', header: 'Paid', cell: ({ row }) => <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(Number(row.original.paidAmount))}</span> },
     { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusChip status={row.original.status} /> },
   ];
 
   const paymentColumns: ColumnDef<Payment>[] = [
     { accessorKey: 'paymentNumber', header: 'Payment #', cell: ({ row }) => <span className="font-mono text-xs">{row.original.paymentNumber}</span> },
-    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span> },
+    { accessorKey: 'date', header: 'Date', cell: ({ row }) => <span className="text-sm">{formatDate(String(row.original.date))}</span> },
     { accessorKey: 'method', header: 'Method' },
     { accessorKey: 'type', header: 'Type' },
-    { accessorKey: 'amount', header: 'Amount', cell: ({ row }) => <span className="font-semibold">{formatCurrency(row.original.amount)}</span> },
+    { accessorKey: 'amount', header: 'Amount', cell: ({ row }) => <span className="font-semibold">{formatCurrency(Number(row.original.amount))}</span> },
     { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusChip status={row.original.status} /> },
   ];
 
@@ -76,7 +96,7 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
     <DashboardShell>
       <PageHeader
         title={`${patient.firstName} ${patient.lastName}`}
-        description={`${patient.mrn} · ${age(patient.dateOfBirth)} yrs · ${patient.gender}`}
+        description={`${patient.mrn} · ${age(String(patient.dateOfBirth))} yrs · ${patient.gender}`}
         breadcrumbs={[
           { label: 'Home', href: '/dashboard' },
           { label: 'Patients', href: '/patients' },
@@ -99,7 +119,7 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center">
               <Avatar className="h-20 w-20">
-                <AvatarFallback className={`${patient.avatarColor} text-xl font-bold text-white`}>
+                <AvatarFallback className={`${patient.avatarColor || 'bg-blue-500'} text-xl font-bold text-white`}>
                   {patientInitials(patient)}
                 </AvatarFallback>
               </Avatar>
@@ -115,12 +135,12 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
             <Separator className="my-5" />
 
             <div className="space-y-3">
-              <InfoRow icon={Calendar} label="Date of Birth" value={formatDate(patient.dateOfBirth)} />
+              <InfoRow icon={Calendar} label="Date of Birth" value={formatDate(String(patient.dateOfBirth))} />
               <InfoRow icon={Phone} label="Phone" value={patient.phone} />
               <InfoRow icon={Mail} label="Email" value={patient.email} />
               <InfoRow icon={MapPin} label="Address" value={`${patient.address}, ${patient.city}, ${patient.state} ${patient.zip}`} />
-              <InfoRow icon={Calendar} label="Registered" value={formatDate(patient.registeredOn)} />
-              <InfoRow icon={Calendar} label="Last Visit" value={formatDate(patient.lastVisit)} />
+              <InfoRow icon={Calendar} label="Registered" value={formatDate(String(patient.registeredOn))} />
+              <InfoRow icon={Calendar} label="Last Visit" value={patient.lastVisit ? formatDate(String(patient.lastVisit)) : 'None'} />
             </div>
 
             <Separator className="my-5" />
@@ -128,7 +148,7 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
             <div className="rounded-lg bg-muted/50 p-4">
               <p className="text-xs font-medium text-muted-foreground">Outstanding Balance</p>
               <p className="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {formatCurrency(patient.balance)}
+                {formatCurrency(Number(patient.balance))}
               </p>
               <Button className="mt-3 w-full" size="sm">
                 <CreditCard className="mr-2 h-4 w-4" /> Collect Payment
@@ -149,47 +169,51 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
             </TabsList>
 
             <TabsContent value="insurance" className="space-y-4">
-              {patient.insurance.map((ins, i) => (
-                <Card key={ins.id}>
-                  <CardHeader className="flex-row items-center justify-between space-y-0">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <ShieldCheck className="h-4 w-4 text-primary" />
-                        {ins.provider}
-                      </CardTitle>
-                      <CardDescription>{ins.planName}</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <GenericBadge variant={ins.priority === 'Primary' ? 'info' : 'neutral'}>
-                        {ins.priority}
-                      </GenericBadge>
-                      <StatusChip status={ins.status} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                      <DetailItem label="Member ID" value={ins.memberId} />
-                      <DetailItem label="Group #" value={ins.groupNumber} />
-                      <DetailItem label="Copay" value={formatCurrency(ins.copay)} />
-                      <DetailItem label="Coverage" value={`${ins.coveragePercent}%`} />
-                    </div>
-                    <Separator className="my-4" />
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Deductible</span>
-                        <span className="font-medium">
-                          {formatCurrency(ins.deductibleMet)} / {formatCurrency(ins.deductible)}
-                        </span>
+              {!patient.insurance || patient.insurance.length === 0 ? (
+                <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">No active insurance policies on file.</CardContent></Card>
+              ) : (
+                patient.insurance.map((ins) => (
+                  <Card key={ins.id}>
+                    <CardHeader className="flex-row items-center justify-between space-y-0">
+                      <div>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <ShieldCheck className="h-4 w-4 text-primary" />
+                          {ins.provider}
+                        </CardTitle>
+                        <CardDescription>{ins.planName}</CardDescription>
                       </div>
-                      <Progress value={(ins.deductibleMet / ins.deductible) * 100} className="h-2" />
-                    </div>
-                    <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
-                      <span>Effective: {formatDate(ins.effectiveDate)}</span>
-                      <span>Expires: {formatDate(ins.expiryDate)}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="flex items-center gap-2">
+                        <GenericBadge variant={ins.priority === 'Primary' ? 'info' : 'neutral'}>
+                          {ins.priority}
+                        </GenericBadge>
+                        <StatusChip status={ins.status} />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                        <DetailItem label="Member ID" value={ins.memberId} />
+                        <DetailItem label="Group #" value={ins.groupNumber} />
+                        <DetailItem label="Copay" value={formatCurrency(Number(ins.copay))} />
+                        <DetailItem label="Coverage" value={`${ins.coveragePercent}%`} />
+                      </div>
+                      <Separator className="my-4" />
+                      <div>
+                        <div className="mb-1.5 flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Deductible</span>
+                          <span className="font-medium">
+                            {formatCurrency(Number(ins.deductibleMet))} / {formatCurrency(Number(ins.deductible))}
+                          </span>
+                        </div>
+                        <Progress value={ins.deductible > 0 ? (ins.deductibleMet / ins.deductible) * 100 : 0} className="h-2" />
+                      </div>
+                      <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
+                        <span>Effective: {formatDate(String(ins.effectiveDate))}</span>
+                        <span>Expires: {ins.expiryDate ? formatDate(String(ins.expiryDate)) : 'N/A'}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </TabsContent>
 
             <TabsContent value="claims">
@@ -217,12 +241,12 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                     <CardContent className="flex items-center justify-between py-4">
                       <div>
                         <p className="text-sm font-medium">{ev.provider} — {ev.planName}</p>
-                        <p className="text-xs text-muted-foreground">Verified {formatDate(ev.verificationDate)} · Member {ev.memberId}</p>
+                        <p className="text-xs text-muted-foreground">Verified {formatDate(String(ev.verificationDate))} · Member {ev.memberId}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="text-right text-sm">
-                          <p>Copay: <span className="font-medium">{formatCurrency(ev.copay)}</span></p>
-                          <p className="text-xs text-muted-foreground">Deductible left: {formatCurrency(ev.deductibleRemaining)}</p>
+                          <p>Copay: <span className="font-medium">{formatCurrency(Number(ev.copay))}</span></p>
+                          <p className="text-xs text-muted-foreground">Deductible left: {formatCurrency(Number(ev.deductibleRemaining))}</p>
                         </div>
                         <StatusChip status={ev.status} />
                       </div>
@@ -252,8 +276,8 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                       <Separator className="my-3" />
                       <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
                         <DetailItem label="Visits" value={`${auth.visitsUsed}/${auth.visitsApproved}`} />
-                        <DetailItem label="Valid From" value={formatDate(auth.validFrom)} />
-                        <DetailItem label="Valid To" value={formatDate(auth.validTo)} />
+                        <DetailItem label="Valid From" value={formatDate(String(auth.validFrom))} />
+                        <DetailItem label="Valid To" value={formatDate(String(auth.validTo))} />
                         <DetailItem label="Provider" value={auth.provider} />
                       </div>
                     </CardContent>
@@ -264,24 +288,28 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
 
             <TabsContent value="documents" className="space-y-4">
               <div className="space-y-2">
-                {patient.documents.map((doc) => (
-                  <Card key={doc.id}>
-                    <CardContent className="flex items-center justify-between py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <FileText className="h-4 w-4" />
+                {!patient.documents || patient.documents.length === 0 ? (
+                  <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">No documents uploaded yet.</CardContent></Card>
+                ) : (
+                  patient.documents.map((doc) => (
+                    <Card key={doc.id}>
+                      <CardContent className="flex items-center justify-between py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{doc.name}</p>
+                            <p className="text-xs text-muted-foreground">{doc.type} · {doc.size} · {formatDate(String(doc.uploadedOn))}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">{doc.name}</p>
-                          <p className="text-xs text-muted-foreground">{doc.type} · {doc.size} · {formatDate(doc.uploadedOn)}</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(doc.fileUrl || '#', '_blank')}>
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
               <FileUpload label="Upload new document" hint="PDF, PNG, JPG up to 10MB" />
             </TabsContent>

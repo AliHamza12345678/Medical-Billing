@@ -1,13 +1,14 @@
 'use client';
 
 import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { type ColumnDef } from '@tanstack/react-table';
 import { Users, UserPlus, Download, MoreHorizontal, Eye, Edit, FileText } from 'lucide-react';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { PageHeader } from '@/components/features/page-header';
 import { DataTable } from '@/components/features/data-table';
-import { StatusChip, GenericBadge } from '@/components/features/status-chip';
+import { StatusChip } from '@/components/features/status-chip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,17 +19,60 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { patients, patientInitials } from '@/data/patients';
 import { formatCurrency, formatDate, age } from '@/lib/format';
 import type { Patient } from '@/types';
 
+import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+
 export default function PatientsPage() {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = React.useState<string>('all');
+  const [patientList, setPatientList] = useState<Patient[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+
+  const fetchPatients = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/patients');
+      const data = await res.json();
+      if (res.ok && data.success && Array.isArray(data.data)) {
+        setPatientList(data.data);
+      } else {
+        setPatientList([]);
+      }
+    } catch (err) {
+      console.error('[FETCH_PATIENTS_ERROR]', err);
+      setPatientList([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
+
+  const handleDeletePatient = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete patient '${name}'?`)) return;
+    try {
+      const res = await fetch(`/api/patients/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success('Patient deleted', { description: `Patient '${name}' has been soft-deleted.` });
+        fetchPatients();
+      } else {
+        toast.error('Deletion failed', { description: data.error?.message });
+      }
+    } catch (err) {
+      console.error('[DELETE_PATIENT_ERROR]', err);
+      toast.error('Error', { description: 'Unexpected error deleting patient' });
+    }
+  };
 
   const filtered = React.useMemo(
-    () => (statusFilter === 'all' ? patients : patients.filter((p) => p.status === statusFilter)),
-    [statusFilter]
+    () => (statusFilter === 'all' ? patientList : patientList.filter((p) => p.status === statusFilter)),
+    [statusFilter, patientList]
   );
 
   const columns: ColumnDef<Patient>[] = [
@@ -41,8 +85,8 @@ export default function PatientsPage() {
         return (
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">
-              <AvatarFallback className={`${p.avatarColor} text-xs font-semibold text-white`}>
-                {patientInitials(p)}
+              <AvatarFallback className={`${p.avatarColor || 'bg-blue-500'} text-xs font-semibold text-white`}>
+                {`${(p.firstName || '')[0] || ''}${(p.lastName || '')[0] || ''}`}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
@@ -62,7 +106,7 @@ export default function PatientsPage() {
         const p = row.original;
         return (
           <div className="text-sm">
-            <p>{age(p.dateOfBirth)} yrs</p>
+            <p>{age(String(p.dateOfBirth))} yrs</p>
             <p className="text-xs text-muted-foreground">{p.gender}</p>
           </div>
         );
@@ -83,9 +127,9 @@ export default function PatientsPage() {
       header: 'Insurance',
       cell: ({ row }) => (
         <div className="text-sm">
-          <p className="truncate font-medium">{row.original.insurance[0]?.provider}</p>
+          <p className="truncate font-medium">{row.original.insurance && row.original.insurance[0]?.provider ? row.original.insurance[0].provider : 'Self Pay'}</p>
           <p className="text-xs text-muted-foreground">
-            {row.original.insurance.length} plan{row.original.insurance.length > 1 ? 's' : ''}
+            {row.original.insurance?.length || 0} plan{(row.original.insurance?.length || 0) !== 1 ? 's' : ''}
           </p>
         </div>
       ),
@@ -94,15 +138,15 @@ export default function PatientsPage() {
       accessorKey: 'balance',
       header: 'Balance',
       cell: ({ row }) => (
-        <span className={row.original.balance > 0 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'font-medium'}>
-          {formatCurrency(row.original.balance)}
+        <span className={Number(row.original.balance) > 0 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'font-medium'}>
+          {formatCurrency(Number(row.original.balance))}
         </span>
       ),
     },
     {
       accessorKey: 'lastVisit',
       header: 'Last Visit',
-      cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(row.original.lastVisit)}</span>,
+      cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.lastVisit ? formatDate(String(row.original.lastVisit)) : 'None'}</span>,
     },
     {
       accessorKey: 'status',
@@ -127,8 +171,15 @@ export default function PatientsPage() {
               <Edit className="mr-2 h-4 w-4" /> Edit Patient
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push(`/claims?search=${row.original.mrn}`)}>
               <FileText className="mr-2 h-4 w-4" /> View Claims
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => handleDeletePatient(row.original.id, `${row.original.firstName} ${row.original.lastName}`)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete Patient
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -140,7 +191,7 @@ export default function PatientsPage() {
     <DashboardShell>
       <PageHeader
         title="Patients"
-        description={`${patients.length} patients in your practice`}
+        description={`${patientList.length} patients in your practice`}
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Patients' }]}
         actions={
           <>
