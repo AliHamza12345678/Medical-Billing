@@ -78,15 +78,15 @@ export default function EligibilityPage() {
   };
 
   const columns: ColumnDef<EligibilityVerification>[] = [
-    { accessorKey: 'patientName', header: 'Patient', cell: ({ row }) => <span className="font-medium">{row.original.patientName}</span> },
-    { accessorKey: 'provider', header: 'Provider' },
-    { accessorKey: 'planName', header: 'Plan' },
-    { accessorKey: 'memberId', header: 'Member ID', cell: ({ row }) => <span className="font-mono text-xs">{row.original.memberId}</span> },
-    { accessorKey: 'copay', header: 'Copay', cell: ({ row }) => formatCurrency(Number(row.original.copay)) },
-    { accessorKey: 'deductibleRemaining', header: 'Deductible Left', cell: ({ row }) => formatCurrency(Number(row.original.deductibleRemaining)) },
-    { accessorKey: 'coveragePercent', header: 'Coverage', cell: ({ row }) => `${row.original.coveragePercent}%` },
-    { accessorKey: 'verificationDate', header: 'Verified', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(String(row.original.verificationDate))}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusChip status={row.original.status} /> },
+    { accessorKey: 'patientName', header: 'Patient', cell: ({ row }) => <span className="font-medium">{row.original?.patientName || '—'}</span> },
+    { accessorKey: 'provider', header: 'Provider', cell: ({ row }) => row.original?.provider || '—' },
+    { accessorKey: 'planName', header: 'Plan', cell: ({ row }) => row.original?.planName || '—' },
+    { accessorKey: 'memberId', header: 'Member ID', cell: ({ row }) => <span className="font-mono text-xs">{row.original?.memberId || '—'}</span> },
+    { accessorKey: 'copay', header: 'Copay', cell: ({ row }) => formatCurrency(Number(row.original?.copay || 0)) },
+    { accessorKey: 'deductibleRemaining', header: 'Deductible Left', cell: ({ row }) => formatCurrency(Number(row.original?.deductibleRemaining || 0)) },
+    { accessorKey: 'coveragePercent', header: 'Coverage', cell: ({ row }) => `${Number(row.original?.coveragePercent || 0)}%` },
+    { accessorKey: 'verificationDate', header: 'Verified', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(String(row.original?.verificationDate || new Date()))}</span> },
+    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusChip status={row.original?.status || 'Verified'} /> },
   ];
 
   return (

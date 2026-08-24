@@ -85,27 +85,29 @@ export default function AuthorizationsPage() {
   };
 
   const columns: ColumnDef<Authorization>[] = [
-    { accessorKey: 'authorizationNumber', header: 'Auth #', cell: ({ row }) => <span className="font-mono text-xs">{row.original.authorizationNumber}</span> },
-    { accessorKey: 'patientName', header: 'Patient', cell: ({ row }) => <span className="font-medium">{row.original.patientName}</span> },
-    { accessorKey: 'procedure', header: 'Procedure' },
-    { accessorKey: 'provider', header: 'Insurer' },
+    { accessorKey: 'authorizationNumber', header: 'Auth #', cell: ({ row }) => <span className="font-mono text-xs">{row.original?.authorizationNumber || '—'}</span> },
+    { accessorKey: 'patientName', header: 'Patient', cell: ({ row }) => <span className="font-medium">{row.original?.patientName || '—'}</span> },
+    { accessorKey: 'procedure', header: 'Procedure', cell: ({ row }) => row.original?.procedure || '—' },
+    { accessorKey: 'provider', header: 'Insurer', cell: ({ row }) => row.original?.provider || '—' },
     {
       accessorKey: 'visitsUsed',
       header: 'Visits Used',
       cell: ({ row }) => {
-        const pct = row.original.visitsApproved > 0 ? (row.original.visitsUsed / row.original.visitsApproved) * 100 : 0;
+        const approved = Number(row.original?.visitsApproved || 0);
+        const used = Number(row.original?.visitsUsed || 0);
+        const pct = approved > 0 ? (used / approved) * 100 : 0;
         return (
           <div className="w-28">
             <div className="mb-1 flex justify-between text-xs">
-              <span>{row.original.visitsUsed}/{row.original.visitsApproved}</span>
+              <span>{used}/{approved}</span>
             </div>
             <Progress value={pct} className="h-1.5" />
           </div>
         );
       },
     },
-    { accessorKey: 'validTo', header: 'Valid Until', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(String(row.original.validTo))}</span> },
-    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusChip status={row.original.status} /> },
+    { accessorKey: 'validTo', header: 'Valid Until', cell: ({ row }) => <span className="text-sm text-muted-foreground">{formatDate(String(row.original?.validTo || new Date()))}</span> },
+    { accessorKey: 'status', header: 'Status', cell: ({ row }) => <StatusChip status={row.original?.status || 'Pending'} /> },
   ];
 
   return (
