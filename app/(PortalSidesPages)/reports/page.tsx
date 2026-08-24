@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { TrendingUp, Hourglass, Stethoscope, ShieldCheck, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { DashboardShell } from '@/components/layout/dashboard-shell';
 import { PageHeader } from '@/components/features/page-header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,8 +23,8 @@ export default function ReportsIndexPage() {
         breadcrumbs={[{ label: 'Home', href: '/dashboard' }, { label: 'Reports' }]}
       />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        {reports.map((r, i) => (
-          <motion.div key={r.href} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }}>
+        {reports.map((r) => (
+          <div key={r.href}>
             <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => router.push(r.href)}>
               <CardContent className="flex items-start gap-4 py-6">
                 <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${r.color}`}>
@@ -38,7 +37,7 @@ export default function ReportsIndexPage() {
                 <ArrowRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         ))}
       </div>
     </DashboardShell>

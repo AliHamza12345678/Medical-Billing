@@ -39,6 +39,9 @@ export function AreaChartCard({ data, xKey, areas, height = 280 }: AreaChartCard
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   if (!mounted) return <div style={{ height }} className="w-full bg-muted/20 animate-pulse rounded-lg" />;
+  if (!data || data.length === 0) {
+    return <div style={{ height }} className="flex w-full items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">No revenue data available</div>;
+  }
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -84,6 +87,9 @@ export function BarChartCard({ data, xKey, bars, height = 280, horizontal }: Bar
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   if (!mounted) return <div style={{ height }} className="w-full bg-muted/20 animate-pulse rounded-lg" />;
+  if (!data || data.length === 0) {
+    return <div style={{ height }} className="flex w-full items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">No chart data available</div>;
+  }
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -121,6 +127,9 @@ export function LineChartCard({ data, xKey, lines, height = 280 }: LineChartCard
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   if (!mounted) return <div style={{ height }} className="w-full bg-muted/20 animate-pulse rounded-lg" />;
+  if (!data || data.length === 0) {
+    return <div style={{ height }} className="flex w-full items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">No trend data available</div>;
+  }
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -148,6 +157,9 @@ export function DonutChartCard({ data, height = 280, innerRadius = 60 }: DonutCh
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   if (!mounted) return <div style={{ height }} className="w-full bg-muted/20 animate-pulse rounded-lg" />;
+  if (!data || data.length === 0) {
+    return <div style={{ height }} className="flex w-full items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">No distribution data available</div>;
+  }
 
   return (
     <ResponsiveContainer width="100%" height={height}>
