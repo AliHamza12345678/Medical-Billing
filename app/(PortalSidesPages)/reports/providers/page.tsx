@@ -38,34 +38,37 @@ export default function ProviderReportPage() {
   }, [fetchProviderReport]);
 
   const chartData = providerList.map((p) => ({
-    name: p.provider.replace('Dr. ', ''),
-    revenue: Number(p.revenue),
-    claims: p.claims,
+    name: String(p?.provider || 'Provider').replace('Dr. ', ''),
+    revenue: Number(p?.revenue || 0),
+    claims: Number(p?.claims || 0),
   }));
 
   const columns: ColumnDef<ProviderReportRow>[] = [
-    { accessorKey: 'provider', header: 'Provider', cell: ({ row }) => <span className="font-medium">{row.original.provider}</span> },
-    { accessorKey: 'patients', header: 'Patients' },
-    { accessorKey: 'claims', header: 'Claims' },
-    { accessorKey: 'submitted', header: 'Submitted' },
-    { accessorKey: 'paid', header: 'Paid', cell: ({ row }) => <span className="text-emerald-600 dark:text-emerald-400">{row.original.paid}</span> },
-    { accessorKey: 'denied', header: 'Denied', cell: ({ row }) => <span className="text-rose-600 dark:text-rose-400">{row.original.denied}</span> },
-    { accessorKey: 'revenue', header: 'Revenue', cell: ({ row }) => <span className="font-semibold">{formatCurrency(Number(row.original.revenue))}</span> },
+    { accessorKey: 'provider', header: 'Provider', cell: ({ row }) => <span className="font-medium">{row.original?.provider || '—'}</span> },
+    { accessorKey: 'patients', header: 'Patients', cell: ({ row }) => Number(row.original?.patients || 0) },
+    { accessorKey: 'claims', header: 'Claims', cell: ({ row }) => Number(row.original?.claims || 0) },
+    { accessorKey: 'submitted', header: 'Submitted', cell: ({ row }) => Number(row.original?.submitted || 0) },
+    { accessorKey: 'paid', header: 'Paid', cell: ({ row }) => <span className="text-emerald-600 dark:text-emerald-400">{Number(row.original?.paid || 0)}</span> },
+    { accessorKey: 'denied', header: 'Denied', cell: ({ row }) => <span className="text-rose-600 dark:text-rose-400">{Number(row.original?.denied || 0)}</span> },
+    { accessorKey: 'revenue', header: 'Revenue', cell: ({ row }) => <span className="font-semibold">{formatCurrency(Number(row.original?.revenue || 0))}</span> },
     {
       accessorKey: 'collectionRate',
       header: 'Collection Rate',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Progress value={row.original.collectionRate} className="h-2 w-20" />
-          <span className="text-sm font-medium">{row.original.collectionRate}%</span>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const rate = Number(row.original?.collectionRate || 0);
+        return (
+          <div className="flex items-center gap-2">
+            <Progress value={rate} className="h-2 w-20" />
+            <span className="text-sm font-medium">{rate}%</span>
+          </div>
+        );
+      },
     },
   ];
 
-  const totalRevenue = providerList.reduce((s, p) => s + Number(p.revenue), 0);
+  const totalRevenue = providerList.reduce((s, p) => s + Number(p?.revenue || 0), 0);
   const avgCollection = providerList.length
-    ? (providerList.reduce((s, p) => s + p.collectionRate, 0) / providerList.length).toFixed(1)
+    ? (providerList.reduce((s, p) => s + Number(p?.collectionRate || 0), 0) / providerList.length).toFixed(1)
     : '0';
 
   return (
@@ -79,7 +82,7 @@ export default function ProviderReportPage() {
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatBox label="Total Providers" value={String(providerList.length)} />
         <StatBox label="Total Revenue" value={formatCurrency(totalRevenue)} />
-        <StatBox label="Total Claims" value={String(providerList.reduce((s, p) => s + p.claims, 0))} />
+        <StatBox label="Total Claims" value={String(providerList.reduce((s, p) => s + Number(p?.claims || 0), 0))} />
         <StatBox label="Avg Collection" value={`${avgCollection}%`} />
       </div>
       <Card className="mb-6">

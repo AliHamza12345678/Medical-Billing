@@ -38,33 +38,36 @@ export default function InsuranceReportPage() {
   }, [fetchInsuranceReport]);
 
   const chartData = payerList.map((r) => ({
-    name: r.provider.slice(0, 12),
-    revenue: Number(r.revenue),
-    denialRate: r.denialRate,
+    name: String(r?.provider || 'Provider').slice(0, 12),
+    revenue: Number(r?.revenue || 0),
+    denialRate: Number(r?.denialRate || 0),
   }));
 
   const columns: ColumnDef<InsuranceReportRow>[] = [
-    { accessorKey: 'provider', header: 'Provider', cell: ({ row }) => <span className="font-medium">{row.original.provider}</span> },
-    { accessorKey: 'claims', header: 'Claims', cell: ({ row }) => formatNumber(row.original.claims) },
-    { accessorKey: 'paid', header: 'Paid', cell: ({ row }) => <span className="text-emerald-600 dark:text-emerald-400">{formatNumber(row.original.paid)}</span> },
-    { accessorKey: 'denied', header: 'Denied', cell: ({ row }) => <span className="text-rose-600 dark:text-rose-400">{formatNumber(row.original.denied)}</span> },
-    { accessorKey: 'revenue', header: 'Revenue', cell: ({ row }) => <span className="font-semibold">{formatCurrency(Number(row.original.revenue))}</span> },
-    { accessorKey: 'avgDays', header: 'Avg Days', cell: ({ row }) => `${row.original.avgDays}d` },
+    { accessorKey: 'provider', header: 'Provider', cell: ({ row }) => <span className="font-medium">{row.original?.provider || '—'}</span> },
+    { accessorKey: 'claims', header: 'Claims', cell: ({ row }) => formatNumber(Number(row.original?.claims || 0)) },
+    { accessorKey: 'paid', header: 'Paid', cell: ({ row }) => <span className="text-emerald-600 dark:text-emerald-400">{formatNumber(Number(row.original?.paid || 0))}</span> },
+    { accessorKey: 'denied', header: 'Denied', cell: ({ row }) => <span className="text-rose-600 dark:text-rose-400">{formatNumber(Number(row.original?.denied || 0))}</span> },
+    { accessorKey: 'revenue', header: 'Revenue', cell: ({ row }) => <span className="font-semibold">{formatCurrency(Number(row.original?.revenue || 0))}</span> },
+    { accessorKey: 'avgDays', header: 'Avg Days', cell: ({ row }) => `${Number(row.original?.avgDays || 0)}d` },
     {
       accessorKey: 'denialRate',
       header: 'Denial Rate',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Progress value={row.original.denialRate} className="h-2 w-20" />
-          <span className="text-sm font-medium">{row.original.denialRate}%</span>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const rate = Number(row.original?.denialRate || 0);
+        return (
+          <div className="flex items-center gap-2">
+            <Progress value={rate} className="h-2 w-20" />
+            <span className="text-sm font-medium">{rate}%</span>
+          </div>
+        );
+      },
     },
   ];
 
-  const totalRevenue = payerList.reduce((s, r) => s + Number(r.revenue), 0);
+  const totalRevenue = payerList.reduce((s, r) => s + Number(r?.revenue || 0), 0);
   const avgDenial = payerList.length
-    ? (payerList.reduce((s, r) => s + r.denialRate, 0) / payerList.length).toFixed(1)
+    ? (payerList.reduce((s, r) => s + Number(r?.denialRate || 0), 0) / payerList.length).toFixed(1)
     : '0';
 
   return (
@@ -78,7 +81,7 @@ export default function InsuranceReportPage() {
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatBox label="Active Payers" value={String(payerList.length)} />
         <StatBox label="Total Revenue" value={formatCurrency(totalRevenue)} />
-        <StatBox label="Total Claims" value={formatNumber(payerList.reduce((s, r) => s + r.claims, 0))} />
+        <StatBox label="Total Claims" value={formatNumber(payerList.reduce((s, r) => s + Number(r?.claims || 0), 0))} />
         <StatBox label="Avg Denial Rate" value={`${avgDenial}%`} />
       </div>
       <Card className="mb-6">
