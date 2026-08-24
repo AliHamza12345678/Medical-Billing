@@ -9,7 +9,6 @@ import { BarChartCard, DonutChartCard } from '@/components/features/charts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
-import { Progress } from '@/components/ui/progress';
 import { formatCurrency } from '@/lib/format';
 
 export default function AgingReportPage() {
@@ -45,7 +44,7 @@ export default function AgingReportPage() {
     color: ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'][i % 5],
   }));
 
-  const totalClaims = agingData.reduce((s, r) => s + Number(r?.claims || 0), 0);
+  const totalClaims = (agingData || []).reduce((s, r) => s + Number(r?.claims || 0), 0);
 
   return (
     <DashboardShell>
@@ -83,7 +82,7 @@ export default function AgingReportPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {agingData.map((row, idx) => {
+              {(agingData || []).map((row, idx) => {
                 const claims = Number(row?.claims || 0);
                 const amount = Number(row?.amount || 0);
                 const percent = Number(row?.percent || 0);
@@ -93,7 +92,11 @@ export default function AgingReportPage() {
                     <TableCell className="text-right">{claims}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(amount)}</TableCell>
                     <TableCell className="text-right">{percent}%</TableCell>
-                    <TableCell><div className="w-32"><Progress value={percent} className="h-2" /></div></TableCell>
+                    <TableCell>
+                      <div className="h-2 w-32 overflow-hidden rounded-full bg-secondary">
+                        <div className="h-full bg-amber-500 transition-all" style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })}
